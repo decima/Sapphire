@@ -1,0 +1,13 @@
+version: "3.4"
+services:
+  sapphire:
+    build: .
+    image: decima/sapphire:1.0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 11000:8000
+    deploy:
+      placement:
+        constraints:
+          - "node.role==manager"

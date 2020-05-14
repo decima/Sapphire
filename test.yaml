@@ -1,0 +1,26 @@
+version: "3.0"
+networks:
+  test1:
+    external: true
+  test2:
+  test3:
+services:
+  task1:
+    image: containous/whoami
+    networks: [test1]
+    deploy:
+      replicas: 3
+  task2:
+    image: containous/whoami
+    networks: [test1,test2]
+  task3:
+    image: containous/whoami
+    networks: [test2,test1]
+    deploy:
+      replicas: 10
+  task4:
+    image: containous/whoami
+    networks: [test3]
+  task5:
+    image: containous/whoami
+    networks: [test3]

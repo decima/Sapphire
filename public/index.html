@@ -1,0 +1,165 @@
+<html>
+<head>
+    <title>Sapphire</title>
+</head>
+<body>
+
+<div id="container"></div>
+<script src="https://visjs.github.io/vis-network/standalone/umd/vis-network.min.js"></script>
+<script type="text/javascript">
+
+    var ws;
+
+    var visNodes = null
+    var visEdges = null
+    var previousData = null;
+    if (window.WebSocket === undefined) {
+        document.getElementById("container").append("Your browser does not support WebSockets")
+
+    } else {
+        ws = initWS();
+    }
+
+    function initWS() {
+        var prefix = "wss://"
+        if (window.location.protocol == "http:") {
+            prefix = "ws://"
+        }
+        var socket = new WebSocket(prefix + window.location.host + "/ws"),
+            container = document.getElementById("container")
+        socket.onopen = function () {
+        };
+        socket.onmessage = function (e) {
+            wsMessage = JSON.parse(e.data)
+
+            switch (wsMessage.Action) {
+                case "init":
+                    genGraph(wsMessage.Content)
+                    break;
+                case "service.create":
+                    addNode(wsMessage.Content, "service")
+                    break;
+                case "service.remove":
+                    removeNode(wsMessage.Content, "service")
+                    break;
+                case "network.create":
+                    addNode(wsMessage.Content, "network")
+                    break;
+                case "network.destroy":
+                    removeNode(wsMessage.Content, "network")
+
+                    break;
+                case "network.connect":
+                    addNetworkConnection(wsMessage.Content)
+                    break;
+            }
+
+        }
+        socket.onclose = function () {
+        }
+
+        return socket;
+    }
+
+    function addNetworkConnection(relation) {
+
+        visEdges.add({
+            from: "network-" + relation.Network,
+            to: "service-" + relation.Service,
+        })
+    }
+
+
+    function addNode(name, type) {
+        visNodes.add({
+            id: type + "-" + name,
+            label: name,
+            group: type
+        })
+    }
+
+    function removeNode(name, type) {
+        visNodes.remove({
+            id: type + "-" + name,
+        })
+    }
+
+    function genGraph(data) {
+
+        var nodes = []
+        var edges = []
+        for (var serviceName in data.Services) {
+            if (serviceName == "") continue;
+            nodes.push({
+                id: "service-" + serviceName,
+                label: serviceName,
+                group: 'service'
+            })
+
+        }
+        for (var networkName in data.Networks) {
+            if (networkName == "ingress") continue;
+            var network = data.Networks[networkName]
+            if (!network.Services || network.Services.length < 1) {
+                console.log("network not for services", network);
+                continue;
+            }
+            nodes.push({
+                id: "network-" + networkName,
+                label: networkName,
+                group: 'network'
+            })
+            for (var serviceName in data.Networks[networkName].Services) {
+                edges.push({
+                    from: "network-" + networkName,
+                    to: "service-" + serviceName
+                })
+            }
+        }
+        // create a network
+        var container = document.getElementById('container');
+        var data = {
+            nodes: visNodes = new vis.DataSet(nodes),
+            edges: visEdges = new vis.DataSet(edges),
+        };
+        var options = {
+
+            edges: {
+                color: "#CCC",
+                smooth: true
+            },
+            layout: {improvedLayout: true},
+            physics: {
+                barnesHut: {gravitationalConstant: -30000, avoidOverlap: 0.9},
+                stabilization: {iterations: 2500}
+            },
+            groups: {
+
+                'network': {
+                    color: "#2B7CE9",
+                    shape: 'image',
+                    image: "/images/network.svg"
+                },
+
+                'service': {
+                    shape: 'image',
+                    color: "#C5000B",
+                    image: "/images/service.svg"
+
+                },
+                'container': {
+                    shape: 'image',
+                    color: "#C5000B",
+                    image: "/images/container.svg"
+
+                },
+
+            }
+        };
+        var network = new vis.Network(container, data, options);
+    }
+
+    /* */
+</script>
+</body>
+</html>
